@@ -1,0 +1,82 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1440" height="700" viewBox="0 0 1440 700" role="img" aria-labelledby="title description">
+  <title id="title">Illustrative Touch Bar transcript and AI answer states</title>
+  <desc id="description">Two enlarged, synthetic Touch Bar display states. First, a cyan person icon and two lines of Mac playback transcription. Second, a purple sparkle icon and two lines of AI answer with subtle previous and next controls. The states appear one at a time, not together.</desc>
+  <defs>
+    <linearGradient id="background" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0C1118"/>
+      <stop offset="0.58" stop-color="#11121B"/>
+      <stop offset="1" stop-color="#171121"/>
+    </linearGradient>
+    <radialGradient id="cyanGlow">
+      <stop offset="0" stop-color="#45D4D0" stop-opacity="0.15"/>
+      <stop offset="1" stop-color="#45D4D0" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="purpleGlow">
+      <stop offset="0" stop-color="#9A70E8" stop-opacity="0.2"/>
+      <stop offset="1" stop-color="#9A70E8" stop-opacity="0"/>
+    </radialGradient>
+    <pattern id="grid" width="38" height="38" patternUnits="userSpaceOnUse">
+      <path d="M 38 0 H 0 V 38" fill="none" stroke="#C8C0D2" stroke-opacity="0.07"/>
+    </pattern>
+    <filter id="softShadow" x="-20%" y="-70%" width="140%" height="240%">
+      <feDropShadow dx="0" dy="15" stdDeviation="18" flood-color="#000000" flood-opacity="0.55"/>
+    </filter>
+  </defs>
+
+  <rect width="1440" height="700" fill="url(#background)"/>
+  <rect width="1440" height="700" fill="url(#grid)"/>
+  <ellipse cx="140" cy="190" rx="360" ry="250" fill="url(#cyanGlow)"/>
+  <ellipse cx="1200" cy="600" rx="450" ry="330" fill="url(#purpleGlow)"/>
+
+  <g font-family="-apple-system, BlinkMacSystemFont, 'Helvetica Neue', Arial, sans-serif">
+    <text x="75" y="55" fill="#C6B4FC" font-size="13" font-weight="700" letter-spacing="3">TOUCHBARCHAT / DISPLAY STATES</text>
+    <text x="1365" y="55" text-anchor="end" fill="#8F8A99" font-size="12" letter-spacing="1.4">ENLARGED ILLUSTRATION · SAMPLE CONTENT</text>
+    <text x="75" y="104" fill="#F5F4F8" font-size="31" font-weight="700">One role at a time. Two lines at a time.</text>
+    <text x="75" y="133" fill="#AAA8B4" font-size="15">The role icon changes with the content. New lines move older lines out of view.</text>
+
+    <!-- The visible Touch Bar has one role tile. These are two separate states. -->
+    <rect x="75" y="173" width="1290" height="180" rx="18" fill="#171D24" stroke="#2C4950" stroke-width="1.5"/>
+    <rect x="98" y="194" width="34" height="25" rx="6" fill="#16363A"/>
+    <text x="115" y="211" text-anchor="middle" fill="#9AF0EA" font-size="12" font-weight="700">01</text>
+    <text x="145" y="212" fill="#B8F4EF" font-size="15" font-weight="700" letter-spacing="1.2">LIVE TRANSCRIPT</text>
+    <text x="1337" y="212" text-anchor="end" fill="#769A9E" font-size="12">Mac playback audio</text>
+
+    <g filter="url(#softShadow)">
+      <rect x="179" y="239" width="1082" height="75" rx="13" fill="#080A0E" stroke="#3B444C" stroke-width="1.5"/>
+    </g>
+    <rect x="193" y="248" width="58" height="57" rx="10" fill="#16363A"/>
+    <circle cx="222" cy="267" r="7" fill="#9AF0EA"/>
+    <path d="M 208 290 c0-9 5-14 14-14 s14 5 14 14" fill="#9AF0EA"/>
+    <text x="269" y="269" fill="#F0F6F6" font-size="17" font-weight="500">How would you decide which feature to build first?</text>
+    <text x="269" y="294" fill="#F0F6F6" font-size="17" font-weight="500">What evidence would change your mind?</text>
+    <text x="98" y="337" fill="#79999F" font-size="12">STREAMING TRANSCRIPTION · NO MANUAL LINE NAVIGATION</text>
+
+    <path d="M 720 359 v29 m-6-8 6 8 6-8" fill="none" stroke="#797286" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+    <rect x="588" y="375" width="264" height="29" rx="14.5" fill="#292633" stroke="#51435D"/>
+    <text x="720" y="395" text-anchor="middle" fill="#C5B6DA" font-size="12" font-weight="600">question boundary → optional AI</text>
+
+    <rect x="75" y="416" width="1290" height="180" rx="18" fill="#1A1724" stroke="#453956" stroke-width="1.5"/>
+    <rect x="98" y="437" width="34" height="25" rx="6" fill="#382755"/>
+    <text x="115" y="454" text-anchor="middle" fill="#DAC5FF" font-size="12" font-weight="700">02</text>
+    <text x="145" y="455" fill="#DAC5FF" font-size="15" font-weight="700" letter-spacing="1.2">AI ANSWER</text>
+    <text x="1337" y="455" text-anchor="end" fill="#9382AD" font-size="12">Only when an API is configured</text>
+
+    <g filter="url(#softShadow)">
+      <rect x="179" y="482" width="1082" height="75" rx="13" fill="#080A0E" stroke="#45404F" stroke-width="1.5"/>
+    </g>
+    <rect x="193" y="491" width="58" height="57" rx="10" fill="#382755"/>
+    <path d="M 222 498 l3 14 14 3-14 3-3 14-3-14-14-3 14-3 Z" fill="#DAC5FF"/>
+    <circle cx="236" cy="501" r="2" fill="#DAC5FF"/>
+    <circle cx="207" cy="533" r="2" fill="#DAC5FF"/>
+    <text x="269" y="512" fill="#F6F3FA" font-size="17" font-weight="500">I would start with user impact and evidence.</text>
+    <text x="269" y="537" fill="#F6F3FA" font-size="17" font-weight="500">Then weigh effort, risk, and how to validate...</text>
+    <rect x="1148" y="493" width="45" height="52" rx="8" fill="#141219" stroke="#403A49"/>
+    <path d="M 1163 523 l7-8 7 8" fill="none" stroke="#AAA1B8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    <rect x="1201" y="493" width="45" height="52" rx="8" fill="#141219" stroke="#403A49"/>
+    <path d="M 1216 516 l7 8 7-8" fill="none" stroke="#AAA1B8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    <text x="98" y="580" fill="#9889AF" font-size="12">STREAMING ANSWER · PREVIOUS / NEXT LINE WHEN NEEDED</text>
+
+    <text x="75" y="646" fill="#A5A0AE" font-size="13">Enlarged for readability. The real Touch Bar is narrower and adapts to available space.</text>
+    <text x="1365" y="646" text-anchor="end" fill="#817C8A" font-size="12" letter-spacing="1">APPKIT TOUCH BAR / LIVE STATES</text>
+  </g>
+</svg>

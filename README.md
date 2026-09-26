@@ -1,46 +1,96 @@
+<div align="center">
+
+<sub>MACOS · ON-DEVICE SPEECH · OPTIONAL AI</sub>
+
 # TouchBarChat
 
-[简体中文](README.zh-CN.md)
+### Hear the question. Keep the answer in view.
 
-TouchBarChat is an open-source macOS app for interview transcription and optional real-time AI answer suggestions. It captures **audio played by your Mac**, transcribes it with Apple's on-device speech APIs, and shows the current transcript or a suggested answer on a Touch Bar. The main window keeps a text record for later review, editing, and Markdown export. A Touch Bar is optional.
+An open-source interview companion that transcribes **audio playing on your Mac** locally, streams optional AI answer suggestions, and keeps the conversation in a Markdown-friendly record.
 
-> **Use responsibly.** Only capture a conversation when its participants have been informed and the interview, meeting, or platform rules permit recording or AI assistance. TouchBarChat does not identify speakers or determine whether a particular use is permitted. It is not designed to evade disclosure, monitoring, or interview rules.
+[![macOS 13+](https://img.shields.io/badge/macOS-13%2B-1c1c22?logo=apple&logoColor=white)](#requirements)
+[![Swift 6](https://img.shields.io/badge/Swift-6-f05138?logo=swift&logoColor=white)](#build-from-source)
+[![On-device speech](https://img.shields.io/badge/speech-on--device-6f42c1)](#how-it-works)
+[![MIT License](https://img.shields.io/badge/license-MIT-2ea44f)](LICENSE)
 
-## What it does
+[Explore the experience](#the-experience) · [How it works](#how-it-works) · [Build](#build-from-source) · [简体中文](README.zh-CN.md)
 
-- Streams the Mac's playback audio into Apple local speech recognition. It does **not** capture your microphone, read screen pixels, or save audio/video.
-- Shows rolling two-line transcript and answer views on the Touch Bar. During an AI answer, discreet previous/next controls and `Control + Option + ←/→` let you review lines without losing incoming text.
-- Uses local sound activity, Apple SoundAnalysis, transcript stability, and question heuristics to decide when to request an answer. The menu-bar action **Generate answer now** is available if automatic detection waits too long.
-- Sends a recognized question to a user-configured Chat Completions-compatible endpoint only when AI answers are enabled. Responses stream to the display and the local record.
-- Saves text as an interview progresses. After the interview, you can edit the Markdown document, restore the generated version, delete a record, or export a `.md` file.
-- Provides a first-run guide, permission checks, a menu-bar controller, and light/dark/system appearance settings. Without an API configuration, transcription and local records still work.
+</div>
 
-For the turn-taking state machine and its edge cases, see [Interview flow design](Docs/InterviewFlowDesign.md) and [runtime notes](Docs/InterviewRuntime.md).
+![Illustrative Touch Bar states for live Mac-playback transcription and optional AI answers](Docs/assets/touchbar-flow.svg)
 
-## Requirements and compatibility
+<p align="center"><sub>Enlarged illustration with fictional text, not a device screenshot. The transcript and answer states appear one at a time.</sub></p>
 
-| Item | Requirement or status |
+The person icon marks the **live transcript**; sparkles mark an **AI answer**. Both stream in a rolling two-line window—not a character-by-character animation. Subtle previous/next controls or `Control + Option + ←/→` let you reread an answer without dropping incoming text. The transcript has no paging.
+
+## The experience
+
+| 01 · TRANSCRIBE | 02 · SUGGEST | 03 · REVIEW |
+| :--- | :--- | :--- |
+| Apple on-device speech turns **Mac playback** into a live transcript. No microphone or saved audio. | A configured API streams a suggested answer to a two-line Touch Bar view. It can be skipped entirely. | A local text record preserves the exchange; after the interview, edit, restore, delete, or export Markdown. |
+
+### Main window and records
+
+![Illustrative TouchBarChat interface with synthetic interview content](Docs/assets/touchbarchat-overview.svg)
+
+<p align="center"><sub>Illustrative preview with sample data; not an unedited app screenshot.</sub></p>
+
+**No Touch Bar?** The main-window record still works. **No API?** Transcription and local notes still work. During capture, the record stays read-only.
+
+> [!IMPORTANT]
+> Capture conversations only when participants have been informed and the interview, meeting, or platform rules allow recording and AI assistance. TouchBarChat cannot identify speakers or decide whether a particular use is permitted. It is not designed to evade disclosure, monitoring, or interview rules.
+
+## How it works
+
+`Mac playback → ScreenCaptureKit → Apple local speech → turn detection → optional AI → Touch Bar + local record`
+
+1. **Capture audio only.** ScreenCaptureKit reads the Mac's playback. A display anchors its capture filter, but no video output is attached; microphone input and audio/video files are not used.
+2. **Recognize on-device.** On supported macOS 26 configurations, SpeechAnalyzer/SpeechTranscriber is preferred. Otherwise, `SFSpeechRecognizer` runs only when it supports on-device recognition. There is no silent cloud-speech fallback.
+3. **Decide when to answer.** Local sound activity, Apple SoundAnalysis, transcript stability, and question heuristics help find the end of a turn. This is a timing heuristic, not speaker identification; the menu bar also offers **Generate answer now**.
+4. **Stream and save.** If configured, a Chat Completions-compatible endpoint receives text context and streams a suggestion. Transcript and answer updates reach the display and local record as they arrive. See the [turn-taking design](Docs/InterviewFlowDesign.md) and [runtime pipeline](Docs/InterviewRuntime.md) for interruptions, late answers, and partial responses.
+
+<details>
+<summary>Source map for contributors</summary>
+
+| Concern | Entry point |
 | --- | --- |
-| Operating system | macOS 13 or later is the package minimum. Development and automated tests have run on macOS 26.7; this does not prove the packaged app on macOS 13–25 or other hardware. Those combinations need independent runtime testing. |
+| System playback capture | [`SystemAudioCapture.swift`](Sources/TouchBarChat/SystemAudioCapture.swift) |
+| Local speech engine selection | [`LocalSpeechTranscriber.swift`](Sources/TouchBarChat/LocalSpeechTranscriber.swift) |
+| Turn and interruption rules | [`InterviewQuestionEndPolicy.swift`](Sources/TouchBarChat/InterviewQuestionEndPolicy.swift), [`InterviewInterruptionPolicy.swift`](Sources/TouchBarChat/InterviewInterruptionPolicy.swift) |
+| Streaming AI client | [`AIAnswerClient.swift`](Sources/TouchBarChat/AIAnswerClient.swift) |
+| Touch Bar and main window | [`TouchBarController.swift`](Sources/TouchBarChat/TouchBarController.swift), [`AppUIController.swift`](Sources/TouchBarChat/AppUIController.swift) |
+| Local text record | [`InterviewStore.swift`](Sources/TouchBarChat/InterviewStore.swift) |
+
+</details>
+
+## Languages
+
+The interface has Simplified Chinese, English, Korean, Japanese, Russian, French, and Brazilian Portuguese resources. In **Settings → Languages**, it can follow macOS or use one of those seven languages explicitly. A missing translation may still fall back to Simplified Chinese.
+
+Transcription and answer language are separate settings:
+
+| Layer | Behavior |
+| --- | --- |
+| Interface | Follows macOS by default; can be overridden in Settings. |
+| Interviewer transcription | `zh-CN`, `en-US`, `ko-KR`, `ja-JP`, `ru-RU`, `fr-FR`, or `pt-BR`, **only if** Apple's on-device recognizer supports the selected locale on this Mac. |
+| AI answer | Follows the interviewer language by default, or requests a separately selected language from your model. The model may not always comply. |
+| Saved record | Keeps its interview-language labels, so changing the interface language does not relabel an earlier document. |
+
+A language appearing in Settings does **not** mean its Apple model is installed, available on every Mac, or validated with real meeting audio. The app checks local speech support before capture; an unavailable locale fails visibly instead of sending audio to a remote recognizer.
+
+## Requirements
+
+| Component | Requirement / status |
+| --- | --- |
+| macOS | Package minimum: **13**. Development and automated tests have run on macOS **26.7**. The packaged app still needs independent runtime testing on macOS 13–25 and other hardware. |
 | Build tools | Xcode or Apple Command Line Tools with a Swift 6-capable toolchain. |
-| Speech | The selected locale must support Apple's **on-device** speech recognition on that Mac. macOS 26 prefers SpeechAnalyzer/SpeechTranscriber; earlier or unsupported configurations use local-only SFSpeechRecognizer. A model may need to be downloaded. No cloud-speech fallback is enabled. |
-| Touch Bar | Optional. The app still records and displays interviews in its main window without one. Touch Bar presentation uses an undocumented AppKit interface and may stop working on future macOS releases. |
-| AI answers | Optional network access to your own compatible API. The provider, its availability, charges, retention, and output quality are outside this project. |
+| Speech models | The chosen language needs Apple on-device recognition on the current Mac. A model may need to be downloaded on first use. |
+| Touch Bar | Optional. Presentation uses an **undocumented AppKit interface**, which may stop working in a future macOS release; the main-window record remains usable. |
+| AI | Optional network access to your own Chat Completions-compatible endpoint. Provider fees, availability, retention, and output quality are outside this project. |
 
-### Languages
+## Quick start
 
-The app has interface translation resources for Simplified Chinese, English, Korean, Japanese, Russian, French, and Brazilian Portuguese. In **Settings → Languages**, the interface can follow the Mac's preferred language or use any of those seven languages explicitly. Untranslated strings may fall back to Simplified Chinese while localization is being completed.
-
-The **interviewer language** and **AI answer language** are separate settings. The interviewer-language choices are `zh-CN`, `en-US`, `ko-KR`, `ja-JP`, `ru-RU`, `fr-FR`, and `pt-BR`. The AI answer can follow that language or use a different one. The app checks local speech availability for the selected interviewer language before capture; listing a locale is **not** a claim that its Apple model is installed or has been tested on every Mac. AI response language is a request to your configured model, not a guarantee about its output.
-
-| Layer | Language behavior |
-| --- | --- |
-| Interface | Seven bundled localizations; follows macOS by default or uses a language selected in Settings, with a Chinese fallback for missing strings. |
-| Transcription | Uses the chosen interviewer locale only if Apple's on-device recognizer supports it on the current Mac. Never silently sends audio to a remote recognizer. |
-| AI answer | Uses the chosen answer language, or follows the interviewer language by default, if an API is configured. |
-| Saved document | Keeps labels associated with the interview language, so later interface-language changes do not relabel an existing record. |
-
-## Build and run
+### Build from source
 
 From the repository root:
 
@@ -50,64 +100,54 @@ From the repository root:
 open Build/TouchBarChat.app
 ```
 
-The check script runs strict Swift formatting lint and the test suite. These checks do not validate every speech locale or real Touch Bar hardware.
-
-The build script creates `Build/TouchBarChat.app` with **ad-hoc signing by default**. It does not inspect or select your private signing identities automatically. To use an Apple Development identity explicitly:
+`check.sh` runs strict Swift format lint and the test suite. These checks do not validate every speech locale or real Touch Bar hardware. `build-app.sh` creates `Build/TouchBarChat.app` with **ad-hoc signing by default**; it does not inspect or select your private signing identities. For a stable local development identity, opt in explicitly:
 
 ```bash
 TOUCHBARCHAT_SIGN_IDENTITY="Apple Development: Your Name (TEAMID)" ./Scripts/build-app.sh
 ```
 
-The value above is a **placeholder**, not a project credential. Do not commit certificates, provisioning profiles, API keys, transcripts, or locally signed build products. The default ad-hoc signature may require macOS privacy permissions to be granted again after rebuilding; using a stable app path and explicit Development identity can help during local testing. The bundle identifier is `dev.touchbarchat.app`.
+The identity shown is a placeholder, not a project credential. Keep the app path, bundle identifier (`dev.touchbarchat.app`), and signing identity stable while testing macOS privacy permissions; an ad-hoc rebuild may require permission again. Do not commit certificates, provisioning profiles, keys, transcripts, or signed build products.
 
-## Set up and use
+### First run
 
-1. Launch the app and follow **Permissions → AI connection → Answer preferences → Welcome**. Choose the language spoken by the interviewer. Allow **Screen & System Audio Recording**. Older local-speech configurations may also request **Speech Recognition** permission; macOS 26's supported SpeechTranscriber path does not use that permission.
-2. Optionally enter your provider's **complete Chat Completions endpoint URL**, exact model name, API key, and personal background. Remote endpoints must use HTTPS; HTTP is accepted only for a loopback address. A remote endpoint requires a key, while a loopback endpoint may omit it. You may skip the API steps and use transcription-only mode.
-3. Press the start icon in the main window. The app checks permissions, speech support, and any partially configured API settings before starting. Once capture begins, it minimizes its main window and adds a menu-bar control.
-4. Use the menu-bar control to pause, resume, end, manually request the current answer, or reopen the window. During capture, the record is read-only. End the interview before editing or exporting the Markdown record.
-
-The Touch Bar's person icon indicates **transcription**; the sparkles icon indicates an **AI answer**. Text is shown in a rolling two-line window rather than revealed one character at a time. Previous/next navigation applies to the answer view, not the live transcript.
+1. Follow **Permissions → AI connection → Answer preferences → Welcome**. Select the interviewer's language and allow **Screen & System Audio Recording**. The older `SFSpeechRecognizer` path may also request **Speech Recognition** permission; a supported macOS 26 SpeechTranscriber path does not use it.
+2. Optionally provide a **complete Chat Completions endpoint URL**, exact model name, API key, and personal background. Remote URLs must use HTTPS; HTTP is allowed only for loopback. A remote endpoint requires a key; a loopback endpoint may omit one. Skip these steps for transcription-only mode.
+3. Press the start icon in the main window. The app checks permissions, local speech availability, and any partially configured API settings, then begins capture, minimizes the main window, and adds a menu-bar control.
+4. Use that control to **pause**, **resume**, **end**, **generate the current answer manually**, or **reopen the window**. Edit, delete, or export the Markdown record after ending the interview.
 
 ## Privacy and data flow
 
-| Data | Where it goes |
+| Data | Destination |
 | --- | --- |
-| Playback audio | Captured via ScreenCaptureKit and processed on this Mac by Apple speech and sound-analysis frameworks. No microphone input is requested. The app attaches only an audio output to its capture stream, not a video output. Audio is not saved by TouchBarChat or sent to the configured AI API. Apple's first-use local model download may require network access. |
-| Interview text | Stored by default in `~/Library/Application Support/TouchBarChat/interviews.json`. This is a **local, unencrypted text record**, not a secret vault. The app does not automatically upload the record to GitHub. Exported Markdown is saved wherever you choose. |
-| API settings | The API key is stored in macOS Keychain. The endpoint, model, and personal background are kept in the app's local user preferences. They are not embedded in source code. |
-| AI request | When enabled, the selected endpoint receives the current question, personal background, and up to three recent question/answer drafts as text. The endpoint also receives the API key as a Bearer credential when one is configured. The provider may retain or process this data under its own terms. |
+| Playback audio | Processed on this Mac by ScreenCaptureKit and Apple speech/sound-analysis frameworks. TouchBarChat does not save it or send it to the configured AI API. Apple's first-use local model download may require a network connection. |
+| Interview text | Stored by default in `~/Library/Application Support/TouchBarChat/interviews.json`. This is a **local, unencrypted text file**, not a secret vault; exported Markdown goes wherever you choose. Records are not automatically uploaded to GitHub. |
+| API configuration | The API key is in macOS Keychain. Endpoint, model name, and personal background are in local user preferences, not in source code. |
+| Optional AI request | Your selected endpoint receives the current question, personal background, and up to three recent question/answer drafts as text, plus a Bearer credential when configured. The provider may retain or process that data under its own terms. |
 
-Review your interview rules and your API provider's privacy policy before enabling capture or AI answers. Keep private records and settings out of screenshots, bug reports, commits, and pull requests.
+Review your interview rules and your API provider's privacy policy before use. Remove names, keys, and real interview content from screenshots, logs, issues, and pull requests.
 
-## Advantages and limitations
+## Known limits
 
-The design favors Apple's local transcription, text-only storage, a usable no-API mode, and an answer display that does not require switching windows. A Touch Bar is helpful but not required.
-
-It has important limits:
-
-- It listens to **all eligible playback audio**, which can include meeting participants, videos, music, and notifications. It cannot tell which voice is the interviewer; it does not transcribe your microphone.
-- Local recognition quality and language availability depend on Apple models, audio quality, device, and OS version. Partial transcripts can be revised or omit words.
-- End-of-question and interruption decisions are heuristics, not speaker identification or a guarantee of correct timing. Apple's SpeechDetector is currently not used as an endpoint signal; [the rationale and test result](Docs/InterviewFlowDesign.md#参考与取舍) are documented separately.
-- AI answers can be late, wrong, incomplete, or inconsistent with your actual experience. They are suggestions for review, not verified facts.
-- The Touch Bar integration depends on an undocumented AppKit selector, so compatibility is uncertain and this approach is not suitable for Mac App Store distribution. No notarized release is provided here.
-- The local record is not encrypted, and enabling AI sends text to the provider you selected.
+- Capture includes **eligible Mac playback**, which may include meeting participants, videos, music, or notifications. It cannot determine who is speaking and does not capture what you say into the microphone.
+- Recognition quality and locale availability depend on Apple's models, the Mac, OS version, and audio quality. Partial transcripts may change; final results may arrive late or omit words.
+- Turn-end and interruption decisions are heuristic. `SpeechDetector` is not currently used as an endpoint signal; the [design notes](Docs/InterviewFlowDesign.md#参考与取舍) explain the rationale and test result.
+- AI output can be late, incorrect, incomplete, or inconsistent with your real experience. Treat it as a suggestion, not a verified fact.
+- The Touch Bar path relies on an undocumented AppKit selector, is unsuitable for Mac App Store distribution in its current form, and has no notarized release here.
+- Local records are unencrypted. Enabling AI sends **text** to the provider you choose.
 
 ## Troubleshooting
 
 | Symptom | Check |
 | --- | --- |
-| App missing from Screen & System Audio Recording | Use the permission action in the app, then open the macOS privacy pane. If macOS asks for a restart, quit and reopen the same signed app. Do not replace the app with a differently signed build while testing permissions. |
-| “Recognizing” but no text | Verify that speech is actually **playing on this Mac**, not only spoken into its microphone. Check the selected interviewer language and local speech-model availability. |
-| Incomplete or delayed text | Check the meeting app's playback level and selected language. Partial results may change; final speech results can arrive later. Preserve a short, non-private example when reporting a bug. |
-| No AI answer | Check that the API configuration is complete, the endpoint is the full Chat Completions URL, and the provider accepts the selected model. Try the menu-bar manual-answer action if automatic turn detection waits. |
-| No Touch Bar text | The Mac must have a functioning Touch Bar and the current macOS must still expose the required private interface. The main-window record remains the fallback. Run `swift run TouchBarChat --probe` to inspect selector availability; it does not run an interview. |
-| Permission is lost after rebuilding | Keep a stable bundle ID, app path, and signing identity. Ad-hoc signatures may not retain TCC grants across builds. |
+| App is missing from Screen & System Audio Recording | Request permission in the app, open macOS privacy settings, and restart the **same signed app** if asked. Avoid replacing it with a differently signed build during testing. |
+| “Recognizing” but no text | Confirm speech is playing **on this Mac**, not only spoken into its microphone. Check the selected interviewer language and local model availability. |
+| Incomplete or delayed transcript | Check meeting playback level, audio quality, and selected language. Partial results can be revised and final results can arrive later. Use only a short, non-private sample in bug reports. |
+| No AI suggestion | Verify the full Chat Completions URL, exact model, and complete API configuration. Try the menu-bar manual-answer action if automatic turn detection waits. |
+| No Touch Bar content | Verify hardware and macOS interface support. The main-window record is the fallback. `swift run TouchBarChat --probe` checks selector availability without starting an interview. |
+| Privacy permission is lost after rebuilding | Use a stable app path, bundle ID, and signing identity; ad-hoc signatures may not retain TCC grants. |
 
-## Development and contributing
+## Contributing
 
-Run `./Scripts/check.sh` from the repository root for strict format lint and tests. Tests cover settings validation, text persistence, turn boundaries, AI response parsing, and Touch Bar paging; they do not replace real-device checks of each speech locale or a consenting, non-private capture scenario. Follow [CONTRIBUTING.md](CONTRIBUTING.md) for style, safety, and pull-request guidance. See [third-party notices](THIRD_PARTY_NOTICES.md) for design references; the package currently links no third-party library.
+`./Scripts/check.sh` covers formatting and automated tests for settings validation, text persistence, turn boundaries, AI streaming, and Touch Bar paging. It is **not** a substitute for consenting, non-private real-device tests of each locale or Touch Bar hardware. See [CONTRIBUTING.md](CONTRIBUTING.md) for style and safety guidance, and [third-party notices](THIRD_PARTY_NOTICES.md) for design references. The package currently links no third-party library.
 
-## License
-
-[MIT](LICENSE).
+Licensed under [MIT](LICENSE).
