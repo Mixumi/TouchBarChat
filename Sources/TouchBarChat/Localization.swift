@@ -33,9 +33,9 @@ final class AppLanguageSettings: ObservableObject {
     }
 }
 
-/// Resolves app-owned copy using the system's preferred language. The Chinese
-/// source string is the key and the fallback, so an untranslated string remains
-/// understandable even when a new screen is introduced before all locales ship.
+/// Resolves app-owned copy using the selected UI language or macOS preference.
+/// The Chinese source string is the key and fallback, so a missing translation
+/// remains understandable when a new screen is added.
 enum L10n {
     static var resourceBundle: Bundle {
         // SwiftPM's generated Bundle.module accessor looks next to the
