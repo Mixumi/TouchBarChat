@@ -1,0 +1,437 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <title>TouchBarChat · Touch Bar 转录与回答预览</title>
+  <style>
+    :root {
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "PingFang SC", sans-serif;
+      color-scheme: light dark;
+      --canvas: #f7f7f9;
+      --surface: #ffffff;
+      --surface-secondary: #f2f1f5;
+      --border: #e7e5eb;
+      --text: #232127;
+      --muted: #75727d;
+      --purple: #7044cc;
+      --purple-soft: #efe9fb;
+      --shadow: 0 18px 58px rgba(26, 20, 42, .07);
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --canvas: #17171a;
+        --surface: #202024;
+        --surface-secondary: #29292e;
+        --border: #37363d;
+        --text: #f2f0f5;
+        --muted: #aaa6b3;
+        --purple: #b497ff;
+        --purple-soft: #342c48;
+        --shadow: 0 18px 58px rgba(0, 0, 0, .2);
+      }
+    }
+
+    * { box-sizing: border-box; }
+    body { margin: 0; min-height: 100vh; background: var(--canvas); color: var(--text); }
+    button, input { font: inherit; }
+    button { cursor: pointer; }
+    button:focus-visible, input:focus-visible { outline: 2px solid var(--purple); outline-offset: 3px; }
+
+    .page { width: min(1120px, calc(100% - 48px)); margin: 0 auto; padding: 48px 0 72px; }
+    .eyebrow { color: var(--purple); font-size: 13px; font-weight: 700; letter-spacing: .09em; }
+    h1 { margin: 12px 0 12px; font-size: clamp(30px, 4vw, 44px); line-height: 1.18; letter-spacing: -.035em; }
+    .intro { margin: 0; max-width: 740px; color: var(--muted); font-size: 16px; line-height: 1.75; }
+    .panel { margin-top: 34px; padding: 30px; border: 1px solid var(--border); border-radius: 22px; background: var(--surface); box-shadow: var(--shadow); }
+    .panel-heading { display: flex; align-items: baseline; justify-content: space-between; gap: 18px; }
+    h2 { margin: 0; font-size: 19px; letter-spacing: -.02em; }
+    .small-note { color: var(--muted); font-size: 13px; }
+    .scenario-switch { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 25px; }
+    .scenario-switch button { padding: 9px 15px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface-secondary); color: var(--muted); font-size: 13px; font-weight: 650; transition: background .15s, color .15s, border-color .15s; }
+    .scenario-switch button[aria-pressed="true"] { border-color: var(--purple); background: var(--purple-soft); color: var(--purple); }
+    .flow-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 18px; margin-top: 25px; padding: 17px 18px; border: 1px solid var(--border); border-radius: 14px; background: var(--surface-secondary); }
+    .flow-status { display: grid; gap: 5px; min-width: 0; }
+    .flow-status strong { font-size: 14px; font-weight: 700; }
+    .flow-status span { color: var(--muted); font-size: 12px; line-height: 1.5; }
+    .flow-actions { display: flex; flex: none; gap: 8px; }
+    .flow-actions button { padding: 9px 13px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface); color: var(--text); font-size: 12px; font-weight: 650; }
+    .flow-actions .primary { border-color: var(--purple); background: var(--purple); color: #fff; }
+    .flow-actions button:disabled { opacity: .48; cursor: default; }
+    .scenario-label { margin: 19px 0 0; color: var(--muted); font-size: 12px; font-weight: 650; }
+    .scenario-switch { margin-top: 9px; }
+
+    .preview-stage { display: grid; place-items: center; min-height: 200px; margin-top: 18px; overflow: hidden; border: 1px solid var(--border); border-radius: 17px; background: var(--surface-secondary); }
+    .touchbar-scale { --scale: 1.85; width: 833px; height: 63px; }
+    .touchbar { display: flex; align-items: center; gap: 4px; width: 450px; height: 34px; padding: 2px 4px; transform: scale(var(--scale)); transform-origin: top left; border: 1px solid #303039; border-radius: 8px; background: #09090c; color: #f6f5f8; box-shadow: 0 10px 24px rgba(0, 0, 0, .25); }
+    .touchbar button { flex: none; border: 0; }
+    .role-indicator { display: grid; flex: none; place-items: center; width: 28px; height: 28px; border-radius: 5px; }
+    .role-indicator[data-role="transcript"] { background: #16363a; color: #9af0ea; }
+    .role-indicator[data-role="answer"] { background: #382755; color: #dac5ff; }
+    .role-icon { display: block; width: 18px; height: 18px; background: currentColor; -webkit-mask-image: var(--sf-symbol); mask-image: var(--sf-symbol); -webkit-mask-position: center; mask-position: center; -webkit-mask-repeat: no-repeat; mask-repeat: no-repeat; -webkit-mask-size: contain; mask-size: contain; }
+    .role-indicator[data-role="transcript"] .role-icon { --sf-symbol: url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAYAAACqaXHeAAAAAXNSR0IArs4c6QAAADhlWElmTU0AKgAAAAgAAYdpAAQAAAABAAAAGgAAAAAAAqACAAQAAAABAAAAQKADAAQAAAABAAAAQAAAAABlmWCKAAADSklEQVR4Ae2b24tNURzHh0luJYZ4YEwuKeWSvHiRGEX+A15JKRTvvKh59cDDUB5GUUp49MJkSi5JmgcpMZFLCckttxk+38zKPqez927O/q199jrWr77tvc8++7u+3+/ss9flnOnoiBUTiAnEBP7jBDpb6L2LtheBWeAb+AXavrbgcAC8Ar8TGGV/GPSBpaDtai2OboKk6bR93Qn9YDZoi9qJi+8gzXDa60+4ZkXoCRzAwFgT5l0ob7l2Xagh9CJcn21nptntCBx6YAZV81D7BjRruv66K0G5R+wJQ/MuDN1RQZRu16/ACbfaXg3CPSL3ejCvEPU8WQBMa7Ip21+ybR44RSmtGkiZlo8A1psqrCUz7xKtA5iE3u5azaZHPaZskFkHMMMDZ9LzzOSBxb51ABry+izNGk3LOgBNZN6ZKqwle117WPzIOgApelhcViqDObePAIZS5Rc/4ZO7uLpxBnVVVqO/JM8jM4UlEN3yEMLBEnSbNbHVOIDn8E03U1cS0WmjEDQHCGYmmMx2Ggf3DUI4kiQNbV8LI7cLhHAsNMON9Gp4fG6CIXzm/bsbkYX8mh6MN0Cya6vf/8L5U8DnhAr6f6XZW9m1hAYVxiowF/wEL8E9cA18ArFiAjGBmEApCbTiIagZqJbO1T1qhUdrCHr6q+v7CEot3wHMwc1GsAFosXQZWAymgEalAEaAZn53gAZRd8EoCKb0tfZ+cB2oi6vv6yd6rBWmAbAd6O6pbC1H2Rng41shF9pT+A+DSs0M548b12fZCfW91drgPtDyO0Lj9fclGq8PVs8JjShLL/2w6QKoF9SKY33k9pSZwEIaG66I+WTgx9Hku1fr6KGRZxU074I46zMEPeweV9i8C+EkGs2rE8ZB4Bqp+la/UTCto7BV3XRSn75DXGmVgH6rJ8JkAyHsD1kFcD5A8+4PtKNoCN0QaCLiCEPbDuYFkDeU3AVB3nvy2mjl+U00rj9iauWZ6029MowTGhhtzpKaF8DqrIsDObcmS2deAFq2Dr26sgzkBeDz5y5ZuizPZXrIC+CSpZIWcV0u0q7W9B6A0Lo/p7eviHl37VR2DgH9y8sHMAZcA1Xb/kDbC3ARhN6DYSFWTCAmEBPwnMAfnx6DwDVyTHgAAAAASUVORK5CYII="); }
+    .role-indicator[data-role="answer"] .role-icon { --sf-symbol: url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAYAAACqaXHeAAAAAXNSR0IArs4c6QAAADhlWElmTU0AKgAAAAgAAYdpAAQAAAABAAAAGgAAAAAAAqACAAQAAAABAAAAQKADAAQAAAABAAAAQAAAAABlmWCKAAAEUklEQVR4Ae2aWahNURjHDZnnTJkyZB4jKReRkDcipLwpCi9XlPCmeCFeKE+KPCjFpUjiQeZ5CBFu3JtbHsyuefj96yztdnudc9fe5+y9z/DVr7X3Outb6/u+tfZaa699mjWrSCUClQiUcwRaJuT8VtodAncTaj/xZt9gweXErUjIgMG0+xcaoXVCNvxvtsX/q/guFmeaakc6L75mk2+pFSYsh0+gESBqoQoSk+YFbnkG9S+ACTAFOkOQ1JF5Ex7CUbgHJSG78OIjmB7Plb6jbHVJeO5zYiD3Gv5nwR+E4+QthQFQFqIhboKgEVJ2MhOPTQD6F7v3fXCgBlY5ONKGst/huYNOaouuwTL15itHCy9R/qCjTiqL78EqBeAPdHCwsBNl2zqUL1jRqDvBsRnLtJ8Y7WClNkPfHMoXrGiUAOhNcrLHMm10ykrm462ZzZWeKSfvu+HsE18ANA8oKCUtffFuHbwGb++b6y/kb4Ye4CpTUTgB+6Grq3LY8tlehnpR6UwYA+NgIuhdvimi0fAY7sNTeAEaMdfAJvX80C/z427S9baCceXbetn0dph0hcV4jSxvfVcs5WLN3khrF6ABvMa5Xms01MIxsI2gOb42PnCfKumCNdNhA1yEbEH4ye+noBqqoCPkEg13f51Dcikl+fsiGv8eYLSe8UHgKodQ8AdgiWslcZff5DNahxm9QxqhCdIfgJ0h64pNTUvdb4/h+0K2rNXG77zur4esL1Y1LXPGeHPa62qAVgZThzdVcHu6VuZaPsq7gNq652nwtufa5XKhpbBsW2D5LTXZW7BEvaYdYLZNlc1g9XDQZGpGQir2AzbjlT8XZOx53YSQ7egYZ23prBD1xqoynNZcDkOMcSO4aASb4yZfj1kbo1QqaTcc8U6gxllbeoDyYR6xVMZrKFapV23O2vKPoKOjtKIVrffboCnD3hYEvaCthvZQFKLeXgn6+pNttrc5bMvXrvMgLAPzCs2lu+TjudJSpg8c+rSlFxg5bc4QunMdh2hkPIBH8Ax0/vAqw2fSgkg1tb4HWy+lJV9BmZTvCGjk5HNIFzpYh20B0HYzjMjgmjCKCej8os2TtnajzAHSHQ8jYTDo+demSPdhX4tRDS1v0dQ5pJ7/WqjPoCVXc0SgRAlAYIWZTC15E2EazIapEHa0oRoomvROg74z3oAGSK0oIBuhDqI87z/Q3wujoCilHVZvBx2UugbiJjrDoCRkCV5ocmpqEM5Rtm1JeO5xYn0TA/CScjqVLjnRBKxT5FyjIPWnQlF6Rh9TswXgbpTKi0FXo+B5liCsLQYnotq4wxIArRR9olZeDPr6fBb0GNyJw/h8787C2Kxd3JcAxQsBeXnPSkMA9DE16CvQ1bx7G1BhGgIgszQK/FI2j4Acv+Xz/iv3T315BblNywjQm51XnnCjVaDgkpYAqLe9Z3f6ZlB2ouPud6BDDZd/nZZdoCoOVyJQiUD+IvAP9Dn0wthIWvEAAAAASUVORK5CYII="); }
+    .touchbar-copy { display: grid; flex: 1; grid-template-rows: repeat(2, 13px); min-width: 0; height: 26px; margin: 0 2px; font-size: 11px; font-weight: 550; line-height: 13px; letter-spacing: 0; }
+    .copy-line { height: 13px; overflow: hidden; white-space: nowrap; }
+    .copy-line.is-placeholder { color: #8f8b98; font-weight: 400; }
+    .touchbar-copy[data-role="transcript"] { margin-right: 54px; color: #e9f5f4; }
+    .touchbar-copy[data-role="answer"] { color: #f0eaff; }
+    .copy-line.is-streaming::after { content: "▍"; margin-left: 1px; color: #a7ece8; animation: cursor-blink .8s steps(1, end) infinite; }
+    .touchbar-copy[data-role="answer"] .copy-line.is-streaming::after { color: #d9c3ff; }
+    .ai-controls { display: flex; flex: none; align-items: center; gap: 1px; }
+    .ai-controls[hidden] { display: none; }
+    .line-button { position: relative; display: grid; place-items: center; width: 26px; height: 28px; padding: 0; border-radius: 4px; background: transparent; color: #918d9a; }
+    .line-button:hover:not(:disabled) { background: #24242b; color: #d5cce7; }
+    .line-button:disabled { color: #514e58; cursor: default; }
+    .line-button[data-new="true"]::after { position: absolute; top: 3px; right: 2px; width: 3px; height: 3px; border-radius: 50%; background: #b497ff; content: ""; }
+    .line-icon { display: block; width: 12px; height: 12px; background: currentColor; -webkit-mask-image: var(--sf-chevron); mask-image: var(--sf-chevron); -webkit-mask-position: center; mask-position: center; -webkit-mask-repeat: no-repeat; mask-repeat: no-repeat; -webkit-mask-size: contain; mask-size: contain; }
+    #previous-line .line-icon { --sf-chevron: url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAYAAACqaXHeAAAAAXNSR0IArs4c6QAAADhlWElmTU0AKgAAAAgAAYdpAAQAAAABAAAAGgAAAAAAAqACAAQAAAABAAAAQKADAAQAAAABAAAAQAAAAABlmWCKAAAD3ElEQVR4Ae1aa4hNURS+4zHGIyFG8moKIQqJlDL+SELxR0qiqBl/RKL4QwopapQJf8brD1EUP0QhKZJJCeUReTZoNAx5832T3dyZztl7nbP3uffcY69ac+49e61vrfXtfc/Z65zJ5bx4BjwDngHPgGfAM+AZ8AwUnIFxiHgAWg8dXfDoRQ44FvFboH/+aTOO/w0JXVDsjbziFQnXca4MmnmpRYWq6M7H1VmvvhIFcrl3Llx9f4+xgVkm4ZimeEVCQ1YJqBYUTxJ+Q2dCMyXlqOY+VM2y6XgXtt2yxMCWCMUrcjZmhYAqFPIlBgGt8BmeBRLOxyherYIzpU7AYoviFQnzS5WEPkj8hYGAnxj/ZbB5ivFe0JKTPchYzWLYsQ42+wV2O0ut+olI+IehsNcY7wvtB20y2H7HOLvHkhA2NGxswmZdnV+SV80ygf3lPPtUf1wlKOZiQAVXBH7LA/xSdYqNDBsaNctBx68YD+r9ucS51IN81Dn+VPpDUysNyEwlG3bcpsl+h8CfT5FSKWxg2MiEFc7zj6EV0DDh7e4ZVIfB2+Y0aKqEjQsbGF3iHJsryHqhAKcRNl0FWAUzYeNiKv5khGy4BTbhrY2Al6jpCKCzcdEl/BHjQyNkMRK2nw2YfKg6JAJmYqZnDYmSmHUxom8S4J6IgevUZYEgyTuwifN77Q6/ewL8ObApikiu2LwrzLDIbhZ8dT8tjj2C9rCIEdt1FzxNyR2Kjd7ueEQQZ2u7eWE+jUcY067tHWwGOEinEhgfoDqyubsc5SCWGOKqISEmu1KMZjasEcS7YIZxY7FCkMw12JS5CdeGwtdpN6G6VcCx/A6zzdH1Hy7pt1BdInwOMMF1YOBNgfIJki72K4zzGUNiwouaLgGO7U4sei63TxC/Lqn4vJ2Zmp3nsOmdVALA5ey+geomgatkMtSpcCPDDY0uMMcWOY0aDLZUkAevF7xuOJP1QDIVf85ZNDPQJUE+vHM4ETYxn6A6Avjmp8pJNBnIGJh9g+pyasY49xDWcgoIukAc22wdJTrAdkFeR6PDdvSoFgR5AJvyjm4F+dYTUZ5ATZMz3SYbtpumALNtAlj6zhPkd9gmxktDgOM24I58TxtyfGgTh7u6sBXABmWwDbgj32HA0V2kW2zi6IDX2AA79t0AvLCJarKJdTsE+BbOO91o2CQJX91TaTZmoWIqImhzw+0wNxk8pkW4/a2FchV0Fv6DRmwZBE8+2MhfXntjoyXvyLdG+bmyb+DbZyuZCm/2Abwe1EOLcc9HWJFUwOogtBXaCJ0E9eIZ8Ax4BjwDngHPgGfAMxDEwF9xwa/tw0c9MQAAAABJRU5ErkJggg=="); }
+    #next-line .line-icon { --sf-chevron: url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAYAAACqaXHeAAAAAXNSR0IArs4c6QAAADhlWElmTU0AKgAAAAgAAYdpAAQAAAABAAAAGgAAAAAAAqACAAQAAAABAAAAQKADAAQAAAABAAAAQAAAAABlmWCKAAAD/ElEQVR4Ae1aW4hOURQe9+uETCLxgJDkUkRJKZNEXlxzy4MZipQHXsQo4Q0vwospDygPeDKUQQkJTUmJNMi4Dca1Jpcf31dzarfnnLP27H3OP+f8s1etzt5n7fWtb619/nPOOjNlZV58BXwFfAV8BXwFfAV8BbpoBXoY5D0Aa3ZBN0K/QZ9DsywLQG4vdDL0PvQ31Fp6wvMm9F+bFnBcCs2qrAGxv9CAbz3G3V3IblDAAtCPODfUBTQl3xHA/QoNeAbHVS7xroQAEvikC2hKvmcjuF50ifchApSX2RwX4IR9KyN4crNeusT6EwP8EDbeIzpb+oDAU2hwyetH/iyspQWeOqA632GNnJxjjcCxySXUdQH8O+yjXAI4+o6FfytU3RR9fMklRrUAzmDnXQI4+tYZ8FvnEqMXnB8bBFnsEsTSd7kBrwasMXnZi6UwzyBQI9b0i0VJ1jgQcK+g+uWuzvmkmpVU2FNCMAY+kFQwA5zDBnyOG+AYLxmGlZ+FoD9hn2iMaL9wClz5fq/utj5uhn2IfYhwz81CUJK4Fu6a2NluQLoF1RPW5+sTi6gAsam4axDc6a6rxAsbVhnEvxHmmNS56QCKezvkTryDDk4qoIJTgTEbMX231fkv2CcpPqkMjwgkSOhYCpFrDeIeTCFuO8hynHktkCnAPrOdp/0JNl58rKm7rY9fwN4fWhRZgSg6AX3+AGucX0KAwYaLjZeOr8+XYE1R5TKi6ST0+bYEGLHh0nH1+YUE4nQYYhw8WgVybEX5pcZW2Gj9gOoJq3PaR9sGcPXbI5AjUX6psRU2WmqyYeOdtuBJ+EkfIwLClRbBFhkk/whr2LB1qjC5INGoI7/YsFimwsaqERqFx/N8KsyFZkLOgEUcWdpqOsB0vwFebQfwUl86HBG+CKR5w+QXHEkmYAEbq7iCfoK9QgIqtn2rQJoJ8dEpST0WxCVPW5UE0hl2Nkv8U5REni9RUbIWBsn/NtawK8ykzACrAjQuiSbYy0PYD8I5NlJxvmzEpob4ZurUUSEJJsiGShcTv0O6Uxbn3Mm3UGknpynkTa8cfgvMhawGy7gC0HYHyt8y7x33oNL6ZViTK7kKtlJSm7DG5OlRl6vM28iOx1F6nrdgjcn7w5g8FoCc90Glq0Cy785r8uTdF/oMKiUZZX8C397QXMtCsI9KUDo/P9eZK+TPWRThtOKf++FIZMD/MJN2PLDzxsgGq6RkO7IJEpSOfDSWnPALcQNUSp4NFV+OSlJmIyt+yYkqAhspvhaXtJxAdlEFYENU8sI/WzdD9SKwFWYj1SVkJbLUC5Dlf8FNZVO2APU99A20OpUIHtRXwFfAV8BXwFfAV8BXwFcgugL/AXgEuBhUjtgzAAAAAElFTkSuQmCC"); }
+    @keyframes cursor-blink { 50% { opacity: 0; } }
+    @media (prefers-reduced-motion: reduce) { .copy-line.is-streaming::after { animation: none; } }
+
+    .preview-caption { display: flex; justify-content: space-between; gap: 16px; margin-top: 16px; color: var(--muted); font-size: 13px; line-height: 1.55; }
+    .preview-caption strong { color: var(--text); font-weight: 650; }
+
+    .behavior { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin-top: 16px; }
+    .behavior article { padding: 20px; border: 1px solid var(--border); border-radius: 16px; background: var(--surface); }
+    .behavior h3 { margin: 0 0 8px; font-size: 15px; }
+    .behavior p { margin: 0; color: var(--muted); font-size: 13px; line-height: 1.7; }
+    .footer-note { margin: 18px 2px 0; color: var(--muted); font-size: 12px; line-height: 1.6; }
+
+    @media (max-width: 920px) {
+      .touchbar-scale { --scale: 1.45; width: 653px; height: 50px; }
+      .behavior { grid-template-columns: 1fr; }
+    }
+    @media (max-width: 680px) {
+      .page { width: min(1120px, calc(100% - 28px)); padding-top: 28px; }
+      .panel { padding: 17px; border-radius: 16px; }
+      .panel-heading, .preview-caption { flex-direction: column; align-items: flex-start; gap: 6px; }
+      .flow-toolbar { align-items: stretch; flex-direction: column; }
+      .flow-actions { flex-wrap: wrap; }
+      .touchbar-scale { --scale: .85; width: 383px; height: 29px; }
+      .preview-stage { min-height: 130px; }
+    }
+    @media (max-width: 480px) {
+      .touchbar-scale { --scale: .55; width: 248px; height: 19px; }
+    }
+  </style>
+</head>
+<body>
+  <!-- Icon masks are rendered from macOS SF Symbols: person.fill, sparkles, chevron.up and chevron.down. -->
+  <main class="page">
+    <div class="eyebrow">TOUCHBARCHAT / 交互设计预览</div>
+    <h1>从第一问到追问，始终只看当前两行。</h1>
+    <p class="intro">先看面试官问题的流式转录，再看 AI 的流式回答。面试官继续追问时，Touch Bar 立即回到新问题；上一题的回答不会再盖住它。文字逐行向上滚动，只有 AI 回答允许停下来回看。</p>
+
+    <section class="panel" aria-labelledby="preview-title">
+      <div class="panel-heading">
+        <h2 id="preview-title">连续两题 · Touch Bar 交互预览</h2>
+        <span class="small-note">约 1.85 倍放大展示 · 内容为示例文字</span>
+      </div>
+
+      <div class="flow-toolbar" aria-label="两题演示控制">
+        <div class="flow-status" aria-live="polite">
+          <strong id="turn-label">第 1 题 / 共 2 题</strong>
+          <span id="turn-hint">正在模拟面试官的第一道问题。</span>
+        </div>
+        <div class="flow-actions">
+          <button type="button" id="restart-demo">重播第一题</button>
+          <button type="button" class="primary" id="followup-demo">模拟面试官追问 →</button>
+        </div>
+      </div>
+
+      <p class="scenario-label">快速查看当前题的各个状态</p>
+      <div class="scenario-switch" role="group" aria-label="切换演示状态">
+        <button type="button" data-scenario="live" aria-pressed="true">转录流式演示</button>
+        <button type="button" data-scenario="thinking" aria-pressed="false">AI 生成中</button>
+        <button type="button" data-scenario="answering" aria-pressed="false">AI 流式演示</button>
+        <button type="button" data-scenario="ready" aria-pressed="false">输出完成</button>
+        <button type="button" data-scenario="paused" aria-pressed="false">已暂停</button>
+      </div>
+
+      <div class="preview-stage">
+        <div class="touchbar-scale">
+          <div class="touchbar" role="group" aria-label="Touch Bar 演示">
+            <span class="role-indicator" id="role-indicator" data-role="transcript" role="img" aria-label="电脑播放声音的转录" title="电脑播放声音的转录">
+              <span class="role-icon" aria-hidden="true"></span>
+            </span>
+            <div class="touchbar-copy" id="touchbar-copy" data-role="transcript" aria-live="off">
+              <div class="copy-line" id="line-one"></div>
+              <div class="copy-line" id="line-two"></div>
+            </div>
+            <div class="ai-controls" id="ai-controls" role="group" aria-label="AI 回答逐行回看" hidden>
+              <button type="button" class="line-button" id="previous-line" aria-label="上一行" title="上一行">
+                <span class="line-icon" aria-hidden="true"></span>
+              </button>
+              <button type="button" class="line-button" id="next-line" aria-label="下一行" title="下一行">
+                <span class="line-icon" aria-hidden="true"></span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="preview-caption">
+        <span id="state-description"><strong>转录流式：</strong>最新两行持续更新，临时识别可能修正。</span>
+        <span>点“模拟面试官追问”进入第二题；也可在第一题回答未结束时点它，观察切题。只有 AI 回答出现时，右侧才有翻行按钮。</span>
+      </div>
+    </section>
+
+    <section class="behavior" aria-label="显示规则">
+      <article>
+        <h3>听问题时：只跟随最新</h3>
+        <p>人物图标表示电脑播放声音的转录。新行出现，旧第一行离开；语音识别回改时直接修正文字。这里没有翻行按钮，把空间留给问题。</p>
+      </article>
+      <article>
+        <h3>答案来了：从首段开始</h3>
+        <p>等待 AI 时仍保留问题；收到第一段有效回答才换成星光图标。回答和转录一样逐行上滚，生成结束也不突然跳回开头。</p>
+      </article>
+      <article>
+        <h3>没读完：锁住阅读位置</h3>
+        <p>AI 右侧的淡色箭头每次只移动一行。点上一行后，后续输出继续接收但不顶走当前两行；点下一行回到最新处，再自动跟随。</p>
+      </article>
+    </section>
+    <p class="footer-note">这是两题交互的 HTML 模拟：点击追问代表检测到新的有效提问，真实面试不会按固定时间自动切题。原生程序目前尚未把转录文字放上 Touch Bar，AI 客户端也尚未接入真正的流式返回。“转录”只表示电脑播放的声音被转成文字，应用不能自动判断说话人身份。请仅在参与者知情且规则允许的场景使用。</p>
+  </main>
+
+  <script>
+    const turns = [
+      {
+        question: "能讲讲你最近负责的一个项目吗？我想听你具体做了什么，而不是团队整体做了什么。尤其在最难的问题上，你是怎么判断优先级、推动别人配合，以及最后验证结果的？如果能给出一个具体数字就更好了。",
+        answer: "我以一次跨团队上线为例。我负责需求梳理、优先级判断和交付跟进，不把整个团队的成果都算在自己身上。最难的是上线前需求变更与测试资源冲突。我先按用户影响和截止时间区分必须完成与可延期的工作，再和研发、测试逐项确认负责人及风险，每天同步阻塞点。最终按约定范围上线。复盘时，我认为应该更早确认测试资源，减少最后阶段的被动调整。"
+      },
+      {
+        question: "你刚才提到推动关键同事配合。如果对方不认可你的优先级，而交付时间又很近，你当时会怎么处理？请说一个具体的沟通和取舍过程。",
+        answer: "我会先和对方确认分歧来自目标、资源还是时间判断，而不是直接要求配合。接着把交付期限、用户影响和各方案代价摆出来，确认共同目标。若资源确实冲突，我会提出最小可交付范围，请负责人明确取舍，再把约定和责任人写清楚，短周期同步进度。风险仍无法消除时，我会尽早升级沟通，而不是临近截止才暴露问题。"
+      }
+    ].map(turn => {
+      const questionCharacters = Array.from(turn.question);
+      const transcriptFrames = [];
+      for (let index = 5; index < questionCharacters.length; index += 5) {
+        transcriptFrames.push(questionCharacters.slice(0, index).join(""));
+      }
+      transcriptFrames.push(turn.question);
+      const answerCharacters = Array.from(turn.answer);
+      const answerChunks = [];
+      for (let index = 0; index < answerCharacters.length; index += 5) {
+        answerChunks.push(answerCharacters.slice(index, index + 5).join(""));
+      }
+      return { ...turn, transcriptFrames, answerChunks };
+    });
+    const descriptions = {
+      live: "<strong>转录流式：</strong>始终跟随最新两行；识别回改只修正当前文字。",
+      thinking: "<strong>等待 AI：</strong>问题仍留在屏幕上，尚无有效回答时不切换图标。",
+      answering: "<strong>AI 流式：</strong>每形成新行，窗口上移一行；回看时新内容在后台累积。",
+      ready: "<strong>回答完成：</strong>停在当前两行，不跳回第一页，也不按计时器翻页。",
+      paused: "<strong>演示已暂停：</strong>保持当前文字与阅读位置。"
+    };
+
+    let activeTurnIndex = 0;
+    let scenario = "live";
+    let role = "transcript";
+    let transcriptText = "";
+    let answerText = "";
+    let transcriptFrameIndex = 0;
+    let answerChunkIndex = 0;
+    let reviewStart = null;
+    let streamTimer;
+    let streamEpoch = 0;
+
+    const roleIndicator = document.getElementById("role-indicator");
+    const copy = document.getElementById("touchbar-copy");
+    const lineOne = document.getElementById("line-one");
+    const lineTwo = document.getElementById("line-two");
+    const aiControls = document.getElementById("ai-controls");
+    const previous = document.getElementById("previous-line");
+    const next = document.getElementById("next-line");
+    const description = document.getElementById("state-description");
+    const turnLabel = document.getElementById("turn-label");
+    const turnHint = document.getElementById("turn-hint");
+    const followupDemo = document.getElementById("followup-demo");
+    const measure = document.createElement("canvas").getContext("2d");
+
+    function cancelPendingStream() {
+      streamEpoch += 1;
+      window.clearTimeout(streamTimer);
+    }
+
+    function schedule(action, delay) {
+      const expectedEpoch = streamEpoch;
+      const expectedTurn = activeTurnIndex;
+      streamTimer = window.setTimeout(() => {
+        if (expectedEpoch !== streamEpoch || expectedTurn !== activeTurnIndex) return;
+        action();
+      }, delay);
+    }
+
+    function wrappedLines(text) {
+      if (!text) return [];
+      const width = copy.clientWidth > 0 ? copy.clientWidth - 2 : 350;
+      measure.font = window.getComputedStyle(copy).font || "550 11px sans-serif";
+      const lines = [];
+      let current = "";
+      for (const character of Array.from(text.replace(/\r/g, ""))) {
+        if (character === "\n") {
+          lines.push(current);
+          current = "";
+        } else if (current && measure.measureText(current + character).width > width) {
+          lines.push(current);
+          current = character.trimStart();
+        } else {
+          current += character;
+        }
+      }
+      if (current || lines.length === 0) lines.push(current);
+      return lines;
+    }
+
+    function render() {
+      aiControls.hidden = role !== "answer";
+      roleIndicator.dataset.role = role;
+      roleIndicator.setAttribute("aria-label", role === "answer" ? "AI 回答" : "电脑播放声音的转录");
+      roleIndicator.title = role === "answer" ? "AI 回答" : "电脑播放声音的转录";
+      copy.dataset.role = role;
+
+      const text = role === "answer" ? answerText : transcriptText;
+      const lines = wrappedLines(text);
+      const latestStart = Math.max(0, lines.length - 2);
+      if (role === "answer" && reviewStart !== null && reviewStart >= latestStart) reviewStart = null;
+      const start = role === "answer" && reviewStart !== null ? reviewStart : latestStart;
+      const visible = lines.slice(start, start + 2);
+      const placeholder = !text && role === "transcript" ? "等待电脑播放的声音…" : "";
+      lineOne.textContent = visible[0] || placeholder;
+      lineTwo.textContent = visible[1] || "";
+      lineOne.classList.toggle("is-placeholder", Boolean(placeholder));
+      lineTwo.classList.remove("is-placeholder");
+      copy.dataset.windowStart = String(start);
+      copy.dataset.totalLines = String(lines.length);
+
+      const isStreaming = Boolean(text) && reviewStart === null
+        && ((role === "transcript" && scenario === "live")
+          || (role === "answer" && scenario === "answering"));
+      lineOne.classList.toggle("is-streaming", isStreaming && lines.length <= 1);
+      lineTwo.classList.toggle("is-streaming", isStreaming && lines.length > 1);
+
+      previous.disabled = role !== "answer" || start === 0;
+      next.disabled = role !== "answer" || reviewStart === null;
+      next.dataset.new = role === "answer" && reviewStart !== null && latestStart > start ? "true" : "false";
+      description.innerHTML = descriptions[scenario]
+        + (role === "answer" && reviewStart !== null ? " <span>正在回看，后续文字仍在接收。</span>" : "");
+      const nextTurnLabel = `第 ${activeTurnIndex + 1} 题 / 共 ${turns.length} 题`;
+      const nextTurnHint = activeTurnIndex === 0
+        ? (scenario === "ready" ? "第一题已完成。点击右侧按钮，模拟面试官接着追问。" : "第一题正在进行；追问也可以中断尚未完成的旧回答。")
+        : (scenario === "ready" ? "第二题已完成，当前阅读位置保持不变。" : "已切到第二题；上一题的迟到回答不会覆盖当前内容。");
+      if (turnLabel.textContent !== nextTurnLabel) turnLabel.textContent = nextTurnLabel;
+      if (turnHint.textContent !== nextTurnHint) turnHint.textContent = nextTurnHint;
+      followupDemo.disabled = activeTurnIndex === turns.length - 1;
+      followupDemo.textContent = followupDemo.disabled ? "已进入第二题" : "模拟面试官追问 →";
+      document.querySelectorAll("[data-scenario]").forEach(button => {
+        button.setAttribute("aria-pressed", button.dataset.scenario === scenario ? "true" : "false");
+      });
+    }
+
+    function selectScenario(value) {
+      cancelPendingStream();
+      const turn = turns[activeTurnIndex];
+      if (value === "paused") {
+        scenario = "paused";
+        render();
+        return;
+      }
+      scenario = value;
+      reviewStart = null;
+      if (value === "live") {
+        transcriptText = "";
+        answerText = "";
+        transcriptFrameIndex = 0;
+        role = "transcript";
+      } else if (value === "thinking") {
+        transcriptText = turn.question;
+        answerText = "";
+        role = "transcript";
+      } else if (value === "answering") {
+        transcriptText = turn.question;
+        answerText = "";
+        answerChunkIndex = 0;
+        role = "transcript";
+      } else if (value === "ready") {
+        transcriptText = turn.question;
+        answerText = turn.answer;
+        role = "answer";
+      }
+      render();
+      if (value === "live" || value === "answering") advanceStream();
+    }
+
+    function advanceStream() {
+      const turn = turns[activeTurnIndex];
+      if (scenario === "live") {
+        if (transcriptFrameIndex === turn.transcriptFrames.length) {
+          scenario = "thinking";
+          transcriptText = turn.question;
+          render();
+          schedule(() => selectScenario("answering"), 1000);
+          return;
+        }
+        transcriptText = turn.transcriptFrames[transcriptFrameIndex++];
+        render();
+        schedule(advanceStream, 250);
+      } else if (scenario === "answering") {
+        if (answerChunkIndex === turn.answerChunks.length) {
+          answerText = turn.answer;
+          scenario = "ready";
+          render();
+          return;
+        }
+        const nextChunk = turn.answerChunks[answerChunkIndex++];
+        answerText += nextChunk;
+        if (nextChunk && role !== "answer") role = "answer";
+        render();
+        schedule(advanceStream, 190);
+      }
+    }
+
+    function startFollowup() {
+      if (activeTurnIndex >= turns.length - 1) return;
+      activeTurnIndex += 1;
+      selectScenario("live");
+    }
+
+    function previousLine() {
+      if (role !== "answer") return;
+      const latestStart = Math.max(0, wrappedLines(answerText).length - 2);
+      const currentStart = reviewStart === null ? latestStart : reviewStart;
+      if (currentStart === 0) return;
+      reviewStart = currentStart - 1;
+      render();
+    }
+
+    function nextLine() {
+      if (role !== "answer" || reviewStart === null) return;
+      const latestStart = Math.max(0, wrappedLines(answerText).length - 2);
+      reviewStart = reviewStart + 1 >= latestStart ? null : reviewStart + 1;
+      render();
+    }
+
+    document.querySelectorAll("[data-scenario]").forEach(button => {
+      button.addEventListener("click", () => selectScenario(button.dataset.scenario));
+    });
+    document.getElementById("restart-demo").addEventListener("click", () => {
+      activeTurnIndex = 0;
+      selectScenario("live");
+    });
+    followupDemo.addEventListener("click", startFollowup);
+    previous.addEventListener("click", previousLine);
+    next.addEventListener("click", nextLine);
+    document.addEventListener("keydown", event => {
+      if (role !== "answer") return;
+      if (event.key === "ArrowUp") { event.preventDefault(); previousLine(); }
+      if (event.key === "ArrowDown") { event.preventDefault(); nextLine(); }
+    });
+    window.addEventListener("resize", render);
+    selectScenario("live");
+  </script>
+</body>
+</html>

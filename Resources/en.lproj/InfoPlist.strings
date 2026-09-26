@@ -1,0 +1,3 @@
+"CFBundleDisplayName" = "TouchBarChat";
+"NSSpeechRecognitionUsageDescription" = "Transcribe audio playing on your Mac and save text interview notes after you explicitly start; the microphone is not recorded.";
+"NSScreenCaptureUsageDescription" = "After you explicitly start, capture only system audio playing on your Mac for live transcription; screen images are not saved or processed.";

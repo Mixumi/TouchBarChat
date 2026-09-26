@@ -1,0 +1,3 @@
+"CFBundleDisplayName" = "TouchBarChat";
+"NSSpeechRecognitionUsageDescription" = "Após você iniciar explicitamente, transcreve o áudio reproduzido no Mac e salva registros de texto da entrevista; o microfone não é gravado.";
+"NSScreenCaptureUsageDescription" = "Após você iniciar explicitamente, captura apenas o áudio do sistema reproduzido no Mac para transcrição ao vivo; a imagem da tela não é salva nem processada.";

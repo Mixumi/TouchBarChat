@@ -1,0 +1,3 @@
+"CFBundleDisplayName" = "TouchBarChat";
+"NSSpeechRecognitionUsageDescription" = "明示的に開始した後、Macで再生される音声を文字起こしして面接記録を保存します。マイクは録音しません。";
+"NSScreenCaptureUsageDescription" = "明示的に開始した後、リアルタイムの文字起こしのためMacのシステム音声のみを取得します。画面映像は保存・処理しません。";

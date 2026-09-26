@@ -1,0 +1,3 @@
+"CFBundleDisplayName" = "TouchBarChat";
+"NSSpeechRecognitionUsageDescription" = "사용자가 명시적으로 시작한 후 Mac에서 재생되는 오디오를 텍스트로 전사하고 면접 기록을 저장합니다. 마이크는 녹음하지 않습니다.";
+"NSScreenCaptureUsageDescription" = "사용자가 명시적으로 시작한 후 실시간 전사를 위해 Mac에서 재생되는 시스템 오디오만 캡처합니다. 화면 영상은 저장하거나 처리하지 않습니다.";

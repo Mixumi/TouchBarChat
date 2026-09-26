@@ -1,0 +1,3 @@
+"CFBundleDisplayName" = "TouchBarChat";
+"NSSpeechRecognitionUsageDescription" = "将您明确启动的电脑播放声音转写为文字并保存面试记录；不会录制麦克风。";
+"NSScreenCaptureUsageDescription" = "在您明确启动后，仅采集电脑播放的系统声音用于实时转写；不保存或处理屏幕画面。";

@@ -1,0 +1,3 @@
+"CFBundleDisplayName" = "TouchBarChat";
+"NSSpeechRecognitionUsageDescription" = "Après votre démarrage explicite, transcrit le son diffusé par votre Mac et enregistre des notes textuelles ; le micro n’est pas enregistré.";
+"NSScreenCaptureUsageDescription" = "Après votre démarrage explicite, capture uniquement l’audio système du Mac pour la transcription en direct ; l’image de l’écran n’est ni enregistrée ni traitée.";
